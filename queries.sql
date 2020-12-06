@@ -18,3 +18,4 @@ SELECT res.id, res.name, p.pid, p.url, u.uid, u.username FROM restaurants AS res
 WHERE res.id = p.res_id AND u.uid = p.user_id
 ORDER BY res.id;
 
+
