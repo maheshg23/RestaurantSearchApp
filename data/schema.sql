@@ -56,7 +56,7 @@ CREATE TABLE restaurants (
 
 CREATE TABLE photos (
   pid       INTEGER       PRIMARY KEY,
-  url       VARCHAR(512)  NOT NULL,
+  url       VARCHAR(1024)  NOT NULL,
   timestamp TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
   user_id   INTEGER       NOT NULL,
   res_id    INTEGER       NOT NULL,
