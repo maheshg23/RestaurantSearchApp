@@ -34,7 +34,7 @@ CREATE TABLE payment_methods (
 CREATE TABLE users (
   uid       INTEGER       PRIMARY KEY,
   name      VARCHAR(128)  NOT NULL,
-  username  VARCHAR(64)   UNIQUE,
+  username  VARCHAR(128)   UNIQUE,
   password  VARCHAR(128)  NOT NULL
 );
 
@@ -66,7 +66,7 @@ CREATE TABLE photos (
 
 CREATE TABLE reviews (
   rid        INTEGER         PRIMARY KEY,
-  text      VARCHAR(1024),
+  text      VARCHAR(2048),
   rating    INTEGER         NOT NULL,
   timestamp TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
   user_id   INTEGER         NOT NULL,
@@ -83,7 +83,7 @@ CREATE TABLE restaurant_tags_mapping (
   FOREIGN KEY (tag_id) REFERENCES tags (tid)
 );
 
-CREATE TABLE restaurant_Payments_Mapping (
+CREATE TABLE restaurant_payments_mapping (
   res_id  INTEGER,
   payment_id  INTEGER,
   PRIMARY KEY (res_id, payment_id),
