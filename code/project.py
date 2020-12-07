@@ -72,8 +72,6 @@ def parse_query3(res_name, city, country, status, tags, payment_method):
                 w.append(d['where_param'].format(v))
         return c, f, w
 
-    query = 'SELECT'
-
     keys = list(query_parts.keys())
     vals = [res_name, city, country, status, tags, payment_method]
     for i in range(len(keys)):
@@ -85,12 +83,13 @@ def parse_query3(res_name, city, country, status, tags, payment_method):
         if w:
             query_where += w
     
-    query = 'SELECT {} FROM {}'.format(', '.join(get_unique(query_cols)), ', '.join(get_unique(query_from)))
+    query = """ SELECT {} 
+                FROM {}""".format(', '.join(get_unique(query_cols)), ', '.join(get_unique(query_from)))
     if query_where:
-        query = '{} WHERE {}'.format(query, ' AND '.join(get_unique(query_where)))
+        query = """{} 
+                WHERE {}""".format(query, ' AND '.join(get_unique(query_where)))
     
     return '{};'.format(query)
-
 
 
 @st.cache
@@ -145,6 +144,9 @@ db_query1 = f"""SELECT res.id, res.name, avg_rating
                 ORDER BY reviews_rating.avg_rating DESC 
                 LIMIT 5;"""
 
+'#### Query'
+st.code(db_query1)
+
 '#### Result'
 df = query_db(db_query1)
 st.dataframe(df)
@@ -159,6 +161,7 @@ sql_restaurant_names = 'SELECT name FROM restaurants;'
 restaurant_names = query_db(sql_restaurant_names)['name'].tolist()
 restaurant_names.insert(0, "All")
 restaurant_name = st.selectbox('Choose a Restaurant:', restaurant_names)
+restaurant_name = restaurant_name.replace("'","''")
 
 if table_sel == 'reviews':
     if (restaurant_name == 'All'):
@@ -182,6 +185,8 @@ else:
                             FROM restaurants AS res, photos AS p, users AS u 
                             WHERE res.id = p.res_id AND u.uid = p.user_id and res.name = '{restaurant_name}'
                             ORDER BY res.id;"""
+'#### Query'
+st.code(db_sql_query)
 
 '#### Result'
 df = query_db(db_sql_query)
@@ -195,6 +200,7 @@ sql_restaurant_names = 'SELECT name FROM restaurants;'
 restaurant_names = query_db(sql_restaurant_names)['name'].tolist()
 restaurant_names.insert(0, "None")
 restaurant_name = st.selectbox('Choose a Restaurant', restaurant_names)
+restaurant_name = restaurant_name.replace("'","''")
 
 sql_cities = 'SELECT DISTINCT city FROM location;'
 cities = query_db(sql_cities)['city'].tolist()
@@ -220,15 +226,10 @@ payment_methods = query_db(sql_payment_methods)['name'].tolist()
 payment_methods.insert(0, "None")
 payment_method = st.selectbox(f'Choose a Payment Method', payment_methods)
 
-
-# search_list_sel = st.selectbox(f'Choose a {search_sel}', search_list)
-
-# country_sel = st.radio('Choose a Country', countries)
-# city_sel = st.radio('Choose a City', cities)
-# tag_name_sel = st.selectbox('Choose an Restaurant Tag', tag_names)
-# status_sel = st.selectbox('Choose an Restaurant Status', statuses)
-# payment_method_sel = st.selectbox('Choose an Restaurant Status', payment_methods)
 db_query = parse_query3(restaurant_name, city, country, status, tags, payment_method)
+
+'#### Query'
+st.code(db_query)
 
 df = query_db(db_query)
 st.dataframe(df)
@@ -236,6 +237,7 @@ st.dataframe(df)
 
 '## Query 4 '
 '### Show 10 users with the maximum number of reviews posted by them'
+
 
 db_query_4 = """SELECT u.uid, u.name, u.username, reviews_user.review_count 
                 FROM users AS u, 
@@ -247,6 +249,9 @@ db_query_4 = """SELECT u.uid, u.name, u.username, reviews_user.review_count
                 ORDER BY review_count DESC 
                 LIMIT 10;"""
 
+'#### Query'
+st.code(db_query_4)
+
 '#### Result'
 df = query_db(db_query_4)
 st.dataframe(df)
@@ -254,6 +259,7 @@ st.dataframe(df)
 
 '## Query 5 '
 '### Show the Restaurant Owners who give reviews to their own restaurants'
+
 
 db_query_5 = """SELECT d.rid, d.res_name, d.user_id, d.rating, * 
                 FROM users u, 
@@ -264,6 +270,9 @@ db_query_5 = """SELECT d.rid, d.res_name, d.user_id, d.rating, *
                     ) d 
                 WHERE d.user_id = u.uid;"""
 
+'#### Query'
+st.code(db_query_5)
+
 '#### Result'
 df = query_db(db_query_5)
 st.dataframe(df)
@@ -272,11 +281,15 @@ st.dataframe(df)
 '## Query 6 '
 '### List the users who have posted both photos and reviews along with the count of the number of photos and reviews posted by them'
 
+
 db_query_6 = """SELECT u.uid, u.name, COUNT(DISTINCT rv.rid) AS review_count, COUNT(DISTINCT p.pid) AS photo_count 
                 FROM users u, reviews rv, photos p 
                 WHERE u.uid = rv.user_id AND u.uid = p.user_id 
                 GROUP BY u.uid 
                 ORDER BY review_count, photo_count DESC;"""
+
+'#### Query'
+st.code(db_query_6)
 
 '#### Result'
 df = query_db(db_query_6)
