@@ -4,7 +4,8 @@ Principal of Database Systems Project - Restaurant Search and Discovery Platform
 
 Load the schema.sql life using the below command 
 
-psql -d mg6233-db -a -f PDSRestaurantSearchApp/schema.sql
+psql -d mg6233-db -a -f code/schema.sql
+psql -d mg6233-db -a -f data/load.sql
 
 Run Streamlite App 
 streamlit run project.py --server.address=localhost --server.port=8579

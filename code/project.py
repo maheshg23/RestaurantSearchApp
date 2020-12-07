@@ -57,13 +57,14 @@ if table_name:
 '## Query 1'
 '### List the top 5 restaurants based on the average user reviews'
 
-db_query1 = f"""SELECT ROUND(avg_rating, 3) as Average Rating, * FROM restaurants JOIN ( 
-                SELECT res_id, avg(rating) AS avg_rating FROM reviews 
-                GROUP BY res_id 
-            ) AS reviews 
-            ON restaurants.id = reviews.res_id 
-            ORDER BY avg_rating DESC 
-            LIMIT 5;"""
+db_query1 = f"""SELECT res.id, res.name, avg_rating 
+                FROM restaurants as res JOIN 
+                    (   SELECT res_id, ROUND(avg(rating),3) AS avg_rating FROM reviews 
+                        GROUP BY res_id 
+                    ) AS reviews_rating 
+                ON res.id = reviews_rating.res_id 
+                ORDER BY reviews_rating.avg_rating DESC 
+                LIMIT 5;"""
 
 df = query_db(db_query1)
 st.dataframe(df)
@@ -168,7 +169,6 @@ db_query = f""" SELECT DISTINCT res.id, res.name, l.city, l.country, s.name, pm.
                         res.id = rtm.res_id AND
                         rtm.tag_id = t.tid """;
     
-
 if restaurant_name != 'None':
     db_query += f"AND res.name = '{restaurant_name}' "
 
@@ -196,26 +196,37 @@ df = query_db(db_query)
 st.dataframe(df)
 # st.dataframe(df,2000,1000)
 
-# if country_sel: 
-#     db_query = f""" SELECT * FROM restaurants AS res, status AS s, location AS l, restaurant_payments_mapping AS rpm, payment_methods AS pm
-#                     where   res.status = s.sid AND 
-#                             res.location = l.lid AND 
-#                             res.id = rpm.res_id AND 
-#                             rpm.payment_id = pm.pmid AND 
-#                             l.country = '{country_sel}';"""                  
-#     df = query_db(db_query)
-#     st.dataframe(df)
+'## Query 4 '
+'### Show users with the maximum number of reviews posted'
 
-# if city_sel: 
-#     db_query = f""" SELECT * FROM restaurants AS res, status AS s, location AS l, restaurant_payments_mapping AS rpm, payment_methods AS pm
-#                     where   res.status = s.sid AND 
-#                             res.location = l.lid AND 
-#                             res.id = rpm.res_id AND 
-#                             rpm.payment_id = pm.pmid AND 
-#                             l.city = '{city_sel}';"""              
-#     df = query_db(db_query)
-#     st.dataframe(df)
+db_query_4 = """SELECT u.uid, u.name, reviews_user.review_count 
+                FROM users AS u, 
+                    (   SELECT user_id, COUNT(*) as review_count
+                        FROM reviews 
+                        GROUP BY user_id
+                    ) AS reviews_user
+                WHERE u.uid = reviews_user.user_id 
+                ORDER BY review_count DESC;"""
 
+'#### Result'
+df = query_db(db_query_4)
+st.dataframe(df)
+
+'## Query 5 '
+'### Show the Restaurant Owner who gives reviews for their own restaurants'
+
+db_query_5 = """SELECT d.rid, d.res_name, d.user_id, d.rating, * 
+                FROM users u, 
+                    (   SELECT r.id AS rid, r.name AS res_name, r.owner_id AS user_id, AVG(rv.rating) AS rating 
+                        FROM restaurants r, reviews rv 
+                        WHERE r.id = rv.res_id AND r.owner_id = rv.user_id 
+                        GROUP BY r.owner_id, r.id
+                    ) d 
+                WHERE d.user_id = u.uid;"""
+
+'#### Result'
+df = query_db(db_query_5)
+st.dataframe(df)
 
 
 # '## Query Restaurants'
@@ -259,6 +270,7 @@ st.dataframe(df)
 
 
 # '## Demo List the customers by city'
+
 # sql_cities = 'select distinct city from customers;'
 # cities = query_db(sql_cities)['city'].tolist()
 # city_sel = st.radio('choose a city', cities)
@@ -269,7 +281,8 @@ st.dataframe(df)
 #     st.write(f"The Below customers live in the city '{city_sel}'\n\n {customer_names_str}")
 
 
-# '## Demo List the orders by customers '
+# '## Demo List the orders by customers'
+
 # sql_customers_info = 'select id, name from customers;'
 # cust_info = query_db(sql_customers_info)
 # cust_ids,cust_names = cust_info['id'].tolist(),cust_info['name'].tolist()
