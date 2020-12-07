@@ -2,6 +2,7 @@ import pandas as pd
 import psycopg2
 import streamlit as st
 from configparser import ConfigParser
+from collections import OrderedDict
 
 '# RESTAURANT SEARCH APPLICATION'
 
@@ -15,8 +16,7 @@ def is_valid_val(v):
     return v and v != 'None'
 
 def get_unique(arr):
-    t = set(arr)
-    return [x for x in arr if x in t]
+    return list(OrderedDict.fromkeys(arr))
 
 def parse_query3(res_name, city, country, status, tags, payment_method):
     query_parts = {
