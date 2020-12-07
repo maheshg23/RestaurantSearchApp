@@ -1,22 +1,52 @@
 # RestaurantSearchApp
 Principal of Database Systems Project - Restaurant Search and Discovery Platform Application
 
+### Export NYU net id, univ id and port number
 
-Load the schema.sql life using the below command 
+```bash
+export USER_ID=mg6233
+export NYU_ID=
+export PORT=8567
+```
 
-psql -d mg6233-db -a -f code/schema.sql
-psql -d mg6233-db -a -f data/load.sql
 
-Run Streamlite App 
-streamlit run project.py --server.address=localhost --server.port=8579
-streamlit run code/project.py --server.address=localhost --server.port=8579
+### Change directory to data, generate load.sql and sync with gauss server
 
-run plsql command promt 
-psql -h localhost -U mg6233 mg6233-db
+```bash
+cd RestaurantSearchApp/data
+python3 load.py && sshpass -p $NYU_ID rsync -avz ../ "$USER_ID@gauss.poly.edu:/home/$USER_ID/project"
+```
 
-ssh mg6233@gauss.poly.edu 
+### SSH to gauss and connect the port to localhost
 
-ssh -L 8579:localhost:8579 mg6233@gauss.poly.edu
+```bash
+sshpass -p $NYU_ID ssh -L "$PORT":localhost:"$PORT" "$USER_ID@gauss.poly.edu"
+```
 
-load file into gauss
-python3 load.py && sshpass -p $NYU_ID rsync -avz ./ pa1432@gauss.poly.edu:/home/pa1432/project
+### Import schema and data
+```bash
+export USER_ID=mg6233
+export PORT=8567
+cd project
+
+psql -d "$USER_ID-db" -a -f code/schema.sql
+psql -d "$USER_ID-db" -a -f data/load.sql
+```
+
+### Run Streamlite App 
+```
+streamlit run code/project.py --server.address=localhost --server.port=$PORT
+```
+
+
+### Connect to database
+
+```bash
+psql -h localhost -U $USER_ID "$USER_ID-db"
+```
+
+### Run in background
+```bash
+tmux new -d -s mySession
+tmux send-keys -t mySession.0 "cd /home/$USER_ID/project && streamlit run code/project.py --server.address=localhost --server.port=$PORT" ENTER
+```
