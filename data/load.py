@@ -5,10 +5,9 @@ import random
 from datetime import datetime
 
 FILENAME_ROOT = './'
-FILENAME_DATA = 'data/'
 FILENAME_RES_DATA = 'res_sample.json'
 FILENAME_RES_PHOTOS_DATA = 'photo_sample.json'
-FILENAME_INSERT_QUERIES = 'insert.sql'
+FILENAME_INSERT_QUERIES = 'load.sql'
 
 TABLES_WITH_PROPERTIES = {
   'tags': ['tid', 'name'],
@@ -21,7 +20,7 @@ TABLES_WITH_PROPERTIES = {
 }
 
 def get_data_file_path(filename):
-  return os.path.join(FILENAME_ROOT, FILENAME_DATA, filename)
+  return os.path.join(FILENAME_ROOT, filename)
 
 def convert_to_string(param):
   return '\'{}\''.format(param.replace("'", "''")) if param else 'NULL'
