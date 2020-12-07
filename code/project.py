@@ -196,7 +196,7 @@ st.dataframe(df)
 '## Query 3'
 '### Search with Restaurant Name, City, Country, Status, Tags, Payment Method'
 
-sql_restaurant_names = 'SELECT name FROM restaurants;'
+sql_restaurant_names = 'SELECT DISTINCT name FROM restaurants;'
 restaurant_names = query_db(sql_restaurant_names)['name'].tolist()
 restaurant_names.insert(0, "None")
 restaurant_name = st.selectbox('Choose a Restaurant', restaurant_names)
