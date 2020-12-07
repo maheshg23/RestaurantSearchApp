@@ -78,9 +78,6 @@ INSERT INTO location (lid, city, country)
 VALUES (1, 'Delhi', 'India'),
 (2, 'Bangalore', 'India');
 
-INSERT INTO users (uid, name, username, password)
-VALUES (0, 'Admin', 'admin', 'superkey');
-
 INSERT INTO payment_methods (pmid, name)
 VALUES (1, 'Cash'),
 (2, 'Credit Card'),
@@ -102,49 +99,10 @@ query_photos = []
 query_reviews = []
 
 # users
-query_users = []
+query_users = [
+  "(0, 'Admin', 'admin', 'superkey')"
+]
 res_list = []
-with open(PATH_RES_DATA, 'r') as json_file:
-  res_data = json.load(json_file)
-  for data in res_data:
-    res_id = data['site_code']
-    res_list.append(res_id)
-    query_restaurants.append(QUERY_TEMPLATE_10.format(
-      res_id,
-      convert_to_string(data['names'][0]['name']),
-      convert_to_string(data['main_address']['full_address']),
-      convert_to_string(data['phone_number']['number'] if 'phone_number' in data and 'number' in data['phone_number'] else None),
-      convert_to_string(data['home_page'] if 'home_page' in data else None),
-      data['display_point']['coordinates']['latitude'],
-      data['display_point']['coordinates']['longitude'],
-      1,
-      1 if 'Delhi' in data['main_address']['full_address'] else 2,
-      0
-    ))
-    query_payments.append(QUERY_TEMPLATE_2.format(
-      res_id,
-      1
-    ))
-
-    for key, value in data['attributes'].items():
-      if key not in skip_tags:
-        if key not in selected_tags:
-          selected_tags[key] = value['attribute_id']
-          query_tags.append(QUERY_TEMPLATE_2.format(
-            value['attribute_id'],
-            convert_to_string(value['attribute_name'])
-          ))
-        
-        query_res_tags_mapping.append(QUERY_TEMPLATE_2.format(
-          res_id,
-          selected_tags[key]
-        ))
-      elif 'credit' in key or 'debit' in key:
-        query_payments.append(QUERY_TEMPLATE_2.format(
-          res_id,
-          2 if 'credit' in key else 3
-        ))
-
 username_userid_map = {}
 
 counter_photos = 0
@@ -191,25 +149,54 @@ with open(PATH_PHOTOS_REVIEWS_DATA, 'r') as json_file:
         res_id
       ))
 
-query_restaurants_update = []
-for res_id in res_list:
-  r = get_random_user_id(counter_users, 15)
-  if r != 0:
-    query_restaurants_update.append('UPDATE restaurants SET owner_id = {} WHERE id = {}'.format(
-      r,
-      res_id
+with open(PATH_RES_DATA, 'r') as json_file:
+  res_data = json.load(json_file)
+  for data in res_data:
+    res_id = data['site_code']
+    res_list.append(res_id)
+    query_restaurants.append(QUERY_TEMPLATE_10.format(
+      res_id,
+      convert_to_string(data['names'][0]['name']),
+      convert_to_string(data['main_address']['full_address']),
+      convert_to_string(data['phone_number']['number'] if 'phone_number' in data and 'number' in data['phone_number'] else None),
+      convert_to_string(data['home_page'] if 'home_page' in data else None),
+      data['display_point']['coordinates']['latitude'],
+      data['display_point']['coordinates']['longitude'],
+      1,
+      1 if 'Delhi' in data['main_address']['full_address'] else 2,
+      get_random_user_id(counter_users, 20)
+    ))
+    query_payments.append(QUERY_TEMPLATE_2.format(
+      res_id,
+      1
     ))
 
+    for key, value in data['attributes'].items():
+      if key not in skip_tags:
+        if key not in selected_tags:
+          selected_tags[key] = value['attribute_id']
+          query_tags.append(QUERY_TEMPLATE_2.format(
+            value['attribute_id'],
+            convert_to_string(value['attribute_name'])
+          ))
+        query_res_tags_mapping.append(QUERY_TEMPLATE_2.format(
+          res_id,
+          selected_tags[key]
+        ))
+      elif 'credit' in key or 'debit' in key:
+        query_payments.append(QUERY_TEMPLATE_2.format(
+          res_id,
+          2 if 'credit' in key else 3
+        ))
+
+file_dump += get_query_initial('users') + array_to_query(query_users)
 file_dump += get_query_initial('restaurants') + array_to_query(query_restaurants)
 file_dump += get_query_initial('tags') + array_to_query(query_tags)
 file_dump += get_query_initial('restaurant_tags_mapping') + array_to_query(query_res_tags_mapping)
 file_dump += get_query_initial('restaurant_payments_mapping') + array_to_query(query_payments)
 
-file_dump += get_query_initial('users') + array_to_query(query_users)
 file_dump += get_query_initial('photos') + array_to_query(query_photos)
 file_dump += get_query_initial('reviews') + array_to_query(query_reviews)
-
-file_dump += array_to_query(query_restaurants_update, ';\n')
 
 with open(PATH_INSERT_QUERY_FILE, 'w') as sql_file:
   sql_file.write(file_dump)
