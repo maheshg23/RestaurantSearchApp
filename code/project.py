@@ -136,15 +136,6 @@ if table_name:
 '## Query 1'
 '### List the top 5 restaurants based on the average user reviews'
 
-<<<<<<< HEAD
-db_query1 = f"""SELECT ROUND(avg_rating, 3) as average_rating, * FROM restaurants JOIN ( 
-                SELECT res_id, avg(rating) AS avg_rating FROM reviews 
-                GROUP BY res_id 
-            ) AS reviews 
-            ON restaurants.id = reviews.res_id 
-            ORDER BY average_rating DESC 
-            LIMIT 5;"""
-=======
 db_query1 = f"""SELECT res.id, res.name, avg_rating 
                 FROM restaurants as res JOIN 
                     (   SELECT res_id, ROUND(avg(rating),3) AS avg_rating FROM reviews 
@@ -153,7 +144,6 @@ db_query1 = f"""SELECT res.id, res.name, avg_rating
                 ON res.id = reviews_rating.res_id 
                 ORDER BY reviews_rating.avg_rating DESC 
                 LIMIT 5;"""
->>>>>>> a2c7f51366359219c75eeee2bc77dbe2d8eb8a4b
 
 '#### Result'
 df = query_db(db_query1)
