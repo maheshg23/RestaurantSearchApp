@@ -57,7 +57,7 @@ if table_name:
 '## Query 1'
 '### List the top 5 restaurants based on the average user reviews'
 
-db_query1 = f"""SELECT avg_rating,* FROM restaurants JOIN ( 
+db_query1 = f"""SELECT ROUND(avg_rating, 3) as Average Rating, * FROM restaurants JOIN ( 
                 SELECT res_id, avg(rating) AS avg_rating FROM reviews 
                 GROUP BY res_id 
             ) AS reviews 
@@ -112,75 +112,88 @@ st.dataframe(df)
 
 # search_key = ['Restaurant Name','City','Country','Status','Tags','Payment Method']
 # search_sel = st.radio('Choose a Search', search_key)
-
 # if search_sel == 'Restaurant Name':
-# sql_restaurant_names = 'SELECT name FROM restaurants;'
-# restaurant_names = query_db(sql_restaurant_names)['name'].tolist()
-# restaurant_names.insert(0, "None")
-# restaurant_name = st.selectbox('Choose a Restaurant', restaurant_names)
+sql_restaurant_names = 'SELECT name FROM restaurants;'
+restaurant_names = query_db(sql_restaurant_names)['name'].tolist()
+restaurant_names.insert(0, "None")
+restaurant_name = st.selectbox('Choose a Restaurant', restaurant_names)
     
-
-# # if search_sel == 'City':
-# sql_cities = 'SELECT DISTINCT city FROM location;'
-# search_list = query_db(sql_cities)['city'].tolist()
-# restaurant_names.insert(0, "None")
+# if search_sel == 'City':
+sql_cities = 'SELECT DISTINCT city FROM location;'
+cities = query_db(sql_cities)['city'].tolist()
+cities.insert(0, "None")
+city = st.selectbox(f'Choose a City', cities)
 
 # if search_sel == 'Country':
-#     sql_countries = 'SELECT DISTINCT country FROM location;'
-#     search_list = query_db(sql_countries)['country'].tolist()
+sql_countries = 'SELECT DISTINCT country FROM location;'
+countries = query_db(sql_countries)['country'].tolist()
+countries.insert(0, "None")
+country = st.selectbox(f'Choose a Country', countries)
 
 # if search_sel == 'Status':
-#     sql_statuses = 'SELECT DISTINCT name FROM status;'
-#     search_list = query_db(sql_statuses)['name'].tolist()``
+sql_statuses = 'SELECT DISTINCT name FROM status;'
+statuses = query_db(sql_statuses)['name'].tolist()
+statuses.insert(0, "None")
+status = st.selectbox(f'Choose a Status', statuses)
 
 # if search_sel == 'Tags':
-#     sql_tag_names = 'SELECT DISTINCT name FROM tags;'
-#     search_list = query_db(sql_tag_names)['name'].tolist()
+sql_tag_names = 'SELECT DISTINCT name FROM tags;'
+tags_list = query_db(sql_tag_names)['name'].tolist()
+# tags_list.insert(0, "None")
+# tag = st.selectbox(f'Choose a Tag', tags)
+tags = st.multiselect('Choose different Tags', tags_list)
 
 # if search_sel == 'Payment Method':
-#     sql_payment_methods = 'SELECT DISTINCT name FROM payment_methods;'
-#     search_list = query_db(sql_payment_methods)['name'].tolist()
+sql_payment_methods = 'SELECT DISTINCT name FROM payment_methods;'
+payment_methods = query_db(sql_payment_methods)['name'].tolist()
+payment_methods.insert(0, "None")
+payment_method = st.selectbox(f'Choose a Payment Method', payment_methods)
+
 
 # search_list_sel = st.selectbox(f'Choose a {search_sel}', search_list)
 
-# # country_sel = st.radio('Choose a Country', countries)
-# # city_sel = st.radio('Choose a City', cities)
-# # tag_name_sel = st.selectbox('Choose an Restaurant Tag', tag_names)
-# # status_sel = st.selectbox('Choose an Restaurant Status', statuses)
-# # payment_method_sel = st.selectbox('Choose an Restaurant Status', payment_methods)
+# country_sel = st.radio('Choose a Country', countries)
+# city_sel = st.radio('Choose a City', cities)
+# tag_name_sel = st.selectbox('Choose an Restaurant Tag', tag_names)
+# status_sel = st.selectbox('Choose an Restaurant Status', statuses)
+# payment_method_sel = st.selectbox('Choose an Restaurant Status', payment_methods)
 
-# db_query = f""" SELECT * FROM   restaurants AS res, status AS s, location AS l, 
-#                                 restaurant_payments_mapping AS rpm, payment_methods AS pm,
-#                                 restaurant_tags_mapping as rtm, tags AS t
-#                 where   res.status = s.sid AND 
-#                         res.location = l.lid AND 
-#                         res.id = rpm.res_id AND 
-#                         rpm.payment_id = pm.pmid AND 
-#                         res.id = rtm.res_id AND
-#                         rtm.tag_id = t.tid AND """;
+db_query = f""" SELECT DISTINCT res.id, res.name, l.city, l.country, s.name, pm.name, * FROM restaurants AS res, status AS s, location AS l, 
+                                restaurant_payments_mapping AS rpm, payment_methods AS pm,
+                                restaurant_tags_mapping as rtm, tags AS t
+                where   res.status = s.sid AND 
+                        res.location = l.lid AND 
+                        res.id = rpm.res_id AND 
+                        rpm.payment_id = pm.pmid AND 
+                        res.id = rtm.res_id AND
+                        rtm.tag_id = t.tid """;
     
 
-# if search_sel == 'Restaurant Name':
-#     select_query = db_query + f"res.name = '{search_list_sel}';"
+if restaurant_name != 'None':
+    db_query += f"AND res.name = '{restaurant_name}' "
 
-# if search_sel == 'City':
-#     select_query = db_query + f"l.city = '{search_list_sel}';"
+if city != 'None':
+    db_query +=f"AND l.city = '{city}' "
 
-# if search_sel == 'Country':
-#     select_query = db_query + f"l.country = '{search_list_sel}';"
+if country != 'None':
+    db_query += f"AND l.country = '{country}' "
 
-# if search_sel == 'Status':
-#     select_query = db_query + f"s.name = '{search_list_sel}';"
+if status != 'None':
+    db_query += f"AND s.name = '{status}' "
 
-# if search_sel == 'Tags':
-#     select_query = db_query + f"t.name = '{search_list_sel}';"
+if tags:
+    # customer_id = [a.split(':')[1].strip() for a in customer_name]
+    tags_str = ','.join([str(elm) for elm in tags])
+    db_query += f"AND t.name IN ('{tags_str}') "
 
-# if search_sel == 'Payment Method':
-#     select_query = db_query + f"pm.name = '{search_list_sel}';"
+if payment_method != 'None':
+    db_query += f"AND pm.name = '{payment_method}' "
 
-# '#### Result'
-# df = query_db(select_query)
-# st.dataframe(df)
+db_query += ';'
+
+'#### Result'
+df = query_db(db_query)
+st.dataframe(df)
 # st.dataframe(df,2000,1000)
 
 # if country_sel: 
