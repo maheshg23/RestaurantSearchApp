@@ -11,11 +11,90 @@ def get_config(filename='database.ini', section='postgresql'):
     parser.read(filename)
     return {k: v for k, v in parser.items(section)}
 
+def is_valid_val(v):
+    return v and v != 'None'
+
+def get_unique(arr):
+    t = set(arr)
+    return [x for x in arr if x in t]
+
+def parse_query3(res_name, city, country, status, tags, payment_method):
+    query_parts = {
+        'name': {
+            'cols': [],
+            'where_param': 'r.name = \'{}\''
+        },
+        'city': {
+            'cols': ['l.lid AS location_id', 'l.city'],
+            'from': 'location l',
+            'where': 'l.lid = r.location',
+            'where_param': 'l.city = \'{}\''
+        },
+        'country': {
+            'cols': ['l.lid AS location_id', 'l.country'],
+            'from': 'location l',
+            'where': 'l.lid = r.location',
+            'where_param': 'l.country = \'{}\''
+        },
+        'status': {
+            'cols': ['s.sid AS status_id', 's.name AS status'],
+            'from': 'status s',
+            'where': 'r.status = s.sid',
+            'where_param': 's.name = \'{}\''
+        },
+        'tags': {
+            'cols': ['t.tid AS tag_id', 't.name AS tag'],
+            'from': 'tags t, restaurant_tags_mapping tm',
+            'where_param': 't.tid = tm.tag_id AND t.name IN ({}) AND r.id = tm.res_id'
+        },
+        'payment_method': {
+            'cols': ['p.pmid AS payment_id', 'p.name AS payment_method'],
+            'from': 'payment_methods p, restaurant_payments_mapping pm',
+            'where': 'p.pmid = pm.payment_id',
+            'where_param': 'p.name = \'{}\''
+        }
+    }
+
+    query_cols = ['DISTINCT r.id AS res_id', 'r.name', 'r.address', 'r.phone', 'r.website', 'r.latitude', 'r.longitude', 'r.status', 'r.location', 'r.owner_id']
+    query_from = ['restaurants r']
+    query_where = []
+
+    def parse_query_part(k, val):
+        c, f, w = [], '', []
+        if is_valid_val(val) and k in query_parts:
+            v = val if k != 'tags' else ', '.join(["\'{}\'".format(i) for i in val])
+            d = query_parts[k]
+            c = d['cols']
+            f = d['from'] if 'from' in d else ''
+            if 'where' in d:
+                w.append(d['where'])
+            if 'where_param' in d:
+                w.append(d['where_param'].format(v))
+        return c, f, w
+
+    query = 'SELECT'
+
+    keys = list(query_parts.keys())
+    vals = [res_name, city, country, status, tags, payment_method]
+    for i in range(len(keys)):
+        val = vals[i] if isinstance(vals[i], list) else vals[i].replace("'", "''")
+        c, f, w = parse_query_part(keys[i], val)
+        query_cols += c
+        if f:
+            query_from.append(f)
+        if w:
+            query_where += w
+    
+    query = 'SELECT {} FROM {}'.format(', '.join(get_unique(query_cols)), ', '.join(get_unique(query_from)))
+    if query_where:
+        query = '{} WHERE {}'.format(query, ' AND '.join(get_unique(query_where)))
+    
+    return '{};'.format(query)
+
+
 
 @st.cache
 def query_db(sql: str):
-    # print(f'Running query_db(): {sql}')
-
     db_info = get_config()
 
     # Connect to an existing database
@@ -57,12 +136,12 @@ if table_name:
 '## Query 1'
 '### List the top 5 restaurants based on the average user reviews'
 
-db_query1 = f"""SELECT ROUND(avg_rating, 3) as Average Rating, * FROM restaurants JOIN ( 
+db_query1 = f"""SELECT ROUND(avg_rating, 3) as average_rating, * FROM restaurants JOIN ( 
                 SELECT res_id, avg(rating) AS avg_rating FROM reviews 
                 GROUP BY res_id 
             ) AS reviews 
             ON restaurants.id = reviews.res_id 
-            ORDER BY avg_rating DESC 
+            ORDER BY average_rating DESC 
             LIMIT 5;"""
 
 df = query_db(db_query1)
@@ -157,41 +236,8 @@ payment_method = st.selectbox(f'Choose a Payment Method', payment_methods)
 # tag_name_sel = st.selectbox('Choose an Restaurant Tag', tag_names)
 # status_sel = st.selectbox('Choose an Restaurant Status', statuses)
 # payment_method_sel = st.selectbox('Choose an Restaurant Status', payment_methods)
+db_query = parse_query3(restaurant_name, city, country, status, tags, payment_method)
 
-db_query = f""" SELECT DISTINCT res.id, res.name, l.city, l.country, s.name, pm.name, * FROM restaurants AS res, status AS s, location AS l, 
-                                restaurant_payments_mapping AS rpm, payment_methods AS pm,
-                                restaurant_tags_mapping as rtm, tags AS t
-                where   res.status = s.sid AND 
-                        res.location = l.lid AND 
-                        res.id = rpm.res_id AND 
-                        rpm.payment_id = pm.pmid AND 
-                        res.id = rtm.res_id AND
-                        rtm.tag_id = t.tid """;
-    
-
-if restaurant_name != 'None':
-    db_query += f"AND res.name = '{restaurant_name}' "
-
-if city != 'None':
-    db_query +=f"AND l.city = '{city}' "
-
-if country != 'None':
-    db_query += f"AND l.country = '{country}' "
-
-if status != 'None':
-    db_query += f"AND s.name = '{status}' "
-
-if tags:
-    # customer_id = [a.split(':')[1].strip() for a in customer_name]
-    tags_str = ','.join([str(elm) for elm in tags])
-    db_query += f"AND t.name IN ('{tags_str}') "
-
-if payment_method != 'None':
-    db_query += f"AND pm.name = '{payment_method}' "
-
-db_query += ';'
-
-'#### Result'
 df = query_db(db_query)
 st.dataframe(df)
 # st.dataframe(df,2000,1000)
