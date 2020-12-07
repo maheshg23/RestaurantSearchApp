@@ -15,7 +15,7 @@ CREATE TABLE status (
 );
 
 CREATE TABLE location (
-  lid   INTEGER			PRIMARY KEY,
+  lid   INTEGER			  PRIMARY KEY,
   city  VARCHAR(64) 	NOT NULL,
   country VARCHAR(64)	NOT NULL,
   UNIQUE(city, country)

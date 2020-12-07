@@ -62,10 +62,3 @@ FROM users u, reviews rv, photos p
 WHERE u.uid = rv.user_id AND u.uid = p.user_id 
 GROUP BY u.uid 
 ORDER BY review_count, photo_count DESC;
-
-
-SELECT r.user_id, COUNT(r.rid) 
-FROM photos p, reviews r 
-WHERE r.user_id = p.user_id 
-GROUP BY r.user_id 
-ORDER BY COUNT(r.rid) DESC;
