@@ -2,6 +2,7 @@ import os
 import json
 import string
 import random
+from datetime import datetime
 
 FILENAME_ROOT = './'
 FILENAME_DATA = 'data/'
@@ -30,9 +31,9 @@ def get_query_value_template(n):
     return '({})'.format(('{}, ' * n)[:-2])
   return ''
 
-def array_to_query(arr):
+def array_to_query(arr, separator = ',\n'):
   if arr:
-    return ',\n'.join(arr) + ';\n\n'
+    return separator.join(arr) + ';\n\n'
   return '';
 
 def get_query_initial(tablename):
@@ -51,6 +52,12 @@ def get_user_id(s):
 
 def get_random_text(N):
   return ''.join(random.choices(string.ascii_uppercase + string.digits, k=N))
+
+def get_random_user_id(upper_limit, percent_of_non_admin = 10):
+  random.seed(datetime.now())
+  r = random.randint(1, upper_limit)
+  dataset = [0] * (100 - percent_of_non_admin) + [r] * percent_of_non_admin 
+  return random.choice(dataset)
 
 
 PATH_RES_DATA = get_data_file_path(FILENAME_RES_DATA)
@@ -97,14 +104,12 @@ query_reviews = []
 
 # users
 query_users = []
-
-res_list = ''
-
+res_list = []
 with open(PATH_RES_DATA, 'r') as json_file:
   res_data = json.load(json_file)
   for data in res_data:
     res_id = data['site_code']
-    res_list += 'site_code":"{}"\|'.format(res_id)
+    res_list.append(res_id)
     query_restaurants.append(QUERY_TEMPLATE_10.format(
       res_id,
       convert_to_string(data['names'][0]['name']),
@@ -141,11 +146,6 @@ with open(PATH_RES_DATA, 'r') as json_file:
           2 if 'credit' in key else 3
         ))
 
-file_dump += get_query_initial('restaurants') + array_to_query(query_restaurants)
-file_dump += get_query_initial('tags') + array_to_query(query_tags)
-file_dump += get_query_initial('restaurant_tags_mapping') + array_to_query(query_res_tags_mapping)
-file_dump += get_query_initial('restaurant_payments_mapping') + array_to_query(query_payments)
-
 username_userid_map = {}
 
 counter_photos = 0
@@ -155,16 +155,6 @@ with open(PATH_PHOTOS_REVIEWS_DATA, 'r') as json_file:
   d = json.load(json_file)
   for data in d:
     res_id = data['site_code']
-    for photo in data['photos']:
-      counter_photos += 1
-      query_photos.append(QUERY_TEMPLATE_5.format(
-        counter_photos,
-        convert_to_string(photo['photo_sizes']['original']['url']),
-        format_timestamp(photo['date_added']),
-        0,
-        res_id
-      ))
-
     if 'reviews' in data:
       for review in data['reviews']:
         user_name =remove_multiple_spaces(review['user']['profile_name'])
@@ -192,9 +182,35 @@ with open(PATH_PHOTOS_REVIEWS_DATA, 'r') as json_file:
           res_id
         ))
 
+    for photo in data['photos']:
+      counter_photos += 1
+      query_photos.append(QUERY_TEMPLATE_5.format(
+        counter_photos,
+        convert_to_string(photo['photo_sizes']['original']['url']),
+        format_timestamp(photo['date_added']),
+        get_random_user_id(counter_users),
+        res_id
+      ))
+
+query_restaurants_update = []
+for res_id in res_list:
+  r = get_random_user_id(counter_users, 15)
+  if r != 0:
+    query_restaurants_update.append('UPDATE restaurants SET owner_id = {} WHERE id = {}'.format(
+      r,
+      res_id
+    ))
+
+file_dump += get_query_initial('restaurants') + array_to_query(query_restaurants)
+file_dump += get_query_initial('tags') + array_to_query(query_tags)
+file_dump += get_query_initial('restaurant_tags_mapping') + array_to_query(query_res_tags_mapping)
+file_dump += get_query_initial('restaurant_payments_mapping') + array_to_query(query_payments)
+
 file_dump += get_query_initial('users') + array_to_query(query_users)
 file_dump += get_query_initial('photos') + array_to_query(query_photos)
 file_dump += get_query_initial('reviews') + array_to_query(query_reviews)
+
+file_dump += array_to_query(query_restaurants_update, ';\n')
 
 with open(PATH_INSERT_QUERY_FILE, 'w') as sql_file:
   sql_file.write(file_dump)

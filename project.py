@@ -127,7 +127,7 @@ if search_sel == 'Country':
 
 if search_sel == 'Status':
     sql_statuses = 'SELECT DISTINCT name FROM status;'
-    search_list = query_db(sql_statuses)['name'].tolist()``
+    search_list = query_db(sql_statuses)['name'].tolist()
 
 if search_sel == 'Tags':
     sql_tag_names = 'SELECT DISTINCT name FROM tags;'
