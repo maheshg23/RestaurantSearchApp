@@ -18,7 +18,8 @@ def is_valid_val(v):
 def get_unique(arr):
     return list(OrderedDict.fromkeys(arr))
 
-def parse_query3(res_name, city, country, status, tags, payment_method):
+def parse_query3(name, city, country, status, tags, payment_method):
+    res_name = name#.replace("''", "\'")
     query_parts = {
         'name': {
             'cols': [],
@@ -88,7 +89,6 @@ def parse_query3(res_name, city, country, status, tags, payment_method):
     if query_where:
         query = """{} 
                 WHERE {}""".format(query, ' AND '.join(get_unique(query_where)))
-    
     return '{};'.format(query)
 
 
@@ -196,13 +196,12 @@ st.dataframe(df)
 '## Query 3'
 '### Search with Restaurant Name, City, Country, Status, Tags, Payment Method'
 
-sql_restaurant_names = 'SELECT DISTINCT name FROM restaurants;'
+sql_restaurant_names = 'SELECT DISTINCT name FROM restaurants ORDER BY name;'
 restaurant_names = query_db(sql_restaurant_names)['name'].tolist()
 restaurant_names.insert(0, "None")
 restaurant_name = st.selectbox('Choose a Restaurant', restaurant_names)
-restaurant_name = restaurant_name.replace("'","''")
 
-sql_cities = 'SELECT DISTINCT city FROM location;'
+sql_cities = 'SELECT DISTINCT city FROM location ORDER BY city;'
 cities = query_db(sql_cities)['city'].tolist()
 cities.insert(0, "None")
 city = st.selectbox(f'Choose a City', cities)
@@ -217,7 +216,7 @@ statuses = query_db(sql_statuses)['name'].tolist()
 statuses.insert(0, "None")
 status = st.selectbox(f'Choose a Status', statuses)
 
-sql_tag_names = 'SELECT DISTINCT name FROM tags;'
+sql_tag_names = 'SELECT DISTINCT name FROM tags ORDER BY name;'
 tags_list = query_db(sql_tag_names)['name'].tolist()
 tags = st.multiselect('Choose different Tags', tags_list)
 
