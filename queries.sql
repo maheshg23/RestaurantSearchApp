@@ -1,13 +1,24 @@
 -- List the top 5 restaurants based on the average user reviews 
 
-SELECT res.id, res.name, avg_rating 
-FROM restaurants as res JOIN 
+-- SELECT res.id, res.name, avg_rating 
+-- FROM restaurants as res JOIN 
+--     (   SELECT res_id, ROUND(avg(rating),3) AS avg_rating FROM reviews 
+--         GROUP BY res_id 
+--     ) AS reviews_rating 
+-- ON res.id = reviews_rating.res_id 
+-- ORDER BY reviews_rating.avg_rating DESC 
+-- LIMIT 5;
+
+SELECT res.id, res.name, L.city, L.country, avg_rating
+FROM restaurants as res,  
     (   SELECT res_id, ROUND(avg(rating),3) AS avg_rating FROM reviews 
         GROUP BY res_id 
-    ) AS reviews_rating 
-ON res.id = reviews_rating.res_id 
+        HAVING count(*) > 5
+    ) AS reviews_rating,
+    Location as L
+where res.id = reviews_rating.res_id AND res.location = l.lid
 ORDER BY reviews_rating.avg_rating DESC 
-LIMIT 5;
+LIMIT 10;
 
 -- List all reviews and photos posted for each restaurant along with the username who posted it.
 
@@ -46,7 +57,7 @@ ORDER BY review_count DESC
 LIMIT 10;
 
 -- Show the Restaurant Owners who give reviews to their own restaurants
-SELECT d.rid, d.res_name, d.user_id, d.rating, * 
+SELECT d.rid, d.res_name AS restaurant_name, d.user_id, u.username AS restaurant_owner, d.rating, * 
 FROM users u, 
     (   SELECT r.id AS rid, r.name AS res_name, r.owner_id AS user_id, AVG(rv.rating) AS rating 
         FROM restaurants r, reviews rv 
@@ -57,8 +68,11 @@ WHERE d.user_id = u.uid;
 
 
 -- List the users who have posted both photos and reviews along with the count of the number of photos and reviews posted by them
-SELECT u.uid, u.name, COUNT(DISTINCT rv.rid) AS review_count, COUNT(DISTINCT p.pid) AS photo_count 
+SELECT u.uid, u.name as user_name, COUNT(DISTINCT rv.rid) AS review_count, COUNT(DISTINCT p.pid) AS photo_count 
 FROM users u, reviews rv, photos p 
 WHERE u.uid = rv.user_id AND u.uid = p.user_id 
 GROUP BY u.uid 
 ORDER BY review_count, photo_count DESC;
+
+
+

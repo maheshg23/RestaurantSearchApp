@@ -133,16 +133,18 @@ if table_name:
     st.dataframe(df)
 
 '## Query 1'
-'### List the top 5 restaurants based on the average user reviews'
+'### List the top 10 restaurants based on the average user ratings for those restaurants which have more than 5 reviews'
 
-db_query1 = f"""SELECT res.id, res.name, avg_rating 
-                FROM restaurants as res JOIN 
-                    (   SELECT res_id, ROUND(avg(rating),3) AS avg_rating FROM reviews 
-                        GROUP BY res_id 
-                    ) AS reviews_rating 
-                ON res.id = reviews_rating.res_id 
-                ORDER BY reviews_rating.avg_rating DESC 
-                LIMIT 5;"""
+db_query1 = f"""SELECT res.id, res.name, L.city, L.country, avg_rating
+    FROM restaurants as res,  
+        (   SELECT res_id, ROUND(avg(rating),3) AS avg_rating FROM reviews 
+            GROUP BY res_id 
+            HAVING count(*) > 5
+        ) AS reviews_rating,
+        Location as L
+    where res.id = reviews_rating.res_id AND res.location = l.lid
+    ORDER BY reviews_rating.avg_rating DESC 
+    LIMIT 10;"""
 
 '#### Query'
 st.code(db_query1)
@@ -154,37 +156,38 @@ st.dataframe(df)
 '## Query 2'
 '### List all reviews and photos posted for each restaurant along with the username who posted it' 
 
-tables_to_sel = ['reviews', 'photos']
+tables_to_sel = ['Reviews', 'Photos']
 table_sel = st.radio('Choose Review or Photos', tables_to_sel)
 
-sql_restaurant_names = 'SELECT name FROM restaurants;'
+sql_restaurant_names = 'SELECT DISTINCT name FROM restaurants ORDER BY name;'
 restaurant_names = query_db(sql_restaurant_names)['name'].tolist()
 restaurant_names.insert(0, "All")
 restaurant_name = st.selectbox('Choose a Restaurant:', restaurant_names)
 restaurant_name = restaurant_name.replace("'","''")
 
-if table_sel == 'reviews':
+if table_sel == 'Reviews':
     if (restaurant_name == 'All'):
-        db_sql_query = f""" SELECT res.id, res.name, r.rid, r.text, u.uid, u.username  
-                        FROM restaurants AS res, reviews AS r, users AS u 
-                        WHERE res.id = r.res_id and u.uid = r.user_id
-                        ORDER BY res.id;"""
+        db_sql_query = f""" SELECT res.id, res.name, r.rid , r.text, u.uid, u.username 
+        FROM restaurants AS res, reviews AS r, users AS u 
+        WHERE res.id = r.res_id AND u.uid = r.user_id
+        ORDER BY res.id;"""
     else:
         db_sql_query = f""" SELECT res.id, res.name, r.rid, r.text, u.uid, u.username  
-                        FROM restaurants AS res, reviews AS r, users AS u 
-                        WHERE res.id = r.res_id and u.uid = r.user_id and res.name = '{restaurant_name}'
-                        ORDER BY res.id;"""
+        FROM restaurants AS res, reviews AS r, users AS u 
+        WHERE res.id = r.res_id AND u.uid = r.user_id AND res.name = '{restaurant_name}'
+        ORDER BY res.id;"""
 else:
     if (restaurant_name == 'All'):
         db_sql_query = f""" SELECT res.id, res.name, p.pid, p.url, u.uid, u.username 
-                            FROM restaurants AS res, photos AS p, users AS u 
-                            WHERE res.id = p.res_id AND u.uid = p.user_id 
-                            ORDER BY res.id;"""
+        FROM restaurants AS res, photos AS p, users AS u 
+        WHERE res.id = p.res_id AND u.uid = p.user_id 
+        ORDER BY res.id;"""
     else:                    
         db_sql_query = f""" SELECT res.id, res.name, p.pid, p.url, u.uid, u.username 
-                            FROM restaurants AS res, photos AS p, users AS u 
-                            WHERE res.id = p.res_id AND u.uid = p.user_id and res.name = '{restaurant_name}'
-                            ORDER BY res.id;"""
+        FROM restaurants AS res, photos AS p, users AS u 
+        WHERE res.id = p.res_id AND u.uid = p.user_id AND res.name = '{restaurant_name}'
+        ORDER BY res.id;"""
+
 '#### Query'
 st.code(db_sql_query)
 
@@ -239,14 +242,14 @@ st.dataframe(df)
 
 
 db_query_4 = """SELECT u.uid, u.name, u.username, reviews_user.review_count 
-                FROM users AS u, 
-                    (   SELECT user_id, COUNT(*) as review_count
-                        FROM reviews 
-                        GROUP BY user_id
-                    ) AS reviews_user
-                WHERE u.uid = reviews_user.user_id 
-                ORDER BY review_count DESC 
-                LIMIT 10;"""
+    FROM users AS u, 
+        (   SELECT user_id, COUNT(*) as review_count
+            FROM reviews 
+            GROUP BY user_id
+        ) AS reviews_user
+    WHERE u.uid = reviews_user.user_id 
+    ORDER BY review_count DESC 
+    LIMIT 10;"""
 
 '#### Query'
 st.code(db_query_4)
@@ -259,15 +262,14 @@ st.dataframe(df)
 '## Query 5 '
 '### Show the Restaurant Owners who give reviews to their own restaurants'
 
-
-db_query_5 = """SELECT d.rid, d.res_name, d.user_id, d.rating, * 
-                FROM users u, 
-                    (   SELECT r.id AS rid, r.name AS res_name, r.owner_id AS user_id, AVG(rv.rating) AS rating 
-                        FROM restaurants r, reviews rv 
-                        WHERE r.id = rv.res_id AND r.owner_id = rv.user_id 
-                        GROUP BY r.owner_id, r.id
-                    ) d 
-                WHERE d.user_id = u.uid;"""
+db_query_5 = """SELECT d.rid, d.res_name AS restaurant_name, d.user_id, u.username AS restaurant_owner, u.username AS username, d.rating
+    FROM users u, 
+    (   SELECT r.id AS rid, r.name AS res_name, r.owner_id AS user_id, AVG(rv.rating) AS rating 
+        FROM restaurants r, reviews rv 
+        WHERE r.id = rv.res_id AND r.owner_id = rv.user_id 
+        GROUP BY r.owner_id, r.id
+    ) AS d 
+    WHERE d.user_id = u.uid;"""
 
 '#### Query'
 st.code(db_query_5)
@@ -278,14 +280,13 @@ st.dataframe(df)
 
 
 '## Query 6 '
-'### List the users who have posted both photos and reviews along with the count of the number of photos and reviews posted by them'
-
+'### List all users who have posted both photos and reviews along with the count of the number of photos and reviews posted by them'
 
 db_query_6 = """SELECT u.uid, u.name, COUNT(DISTINCT rv.rid) AS review_count, COUNT(DISTINCT p.pid) AS photo_count 
-                FROM users u, reviews rv, photos p 
-                WHERE u.uid = rv.user_id AND u.uid = p.user_id 
-                GROUP BY u.uid 
-                ORDER BY review_count, photo_count DESC;"""
+    FROM users u, reviews rv, photos p 
+    WHERE u.uid = rv.user_id AND u.uid = p.user_id 
+    GROUP BY u.uid 
+    ORDER BY review_count, photo_count DESC;"""
 
 '#### Query'
 st.code(db_query_6)
